@@ -1,56 +1,52 @@
 using Microsoft.EntityFrameworkCore;
+using System.Runtime.CompilerServices;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<MovieDbContext>();
 var app = builder.Build();
 
-var movies = new List<Movie>
-{
-    new() { Name = "Titanic", Year = 1997 },
-    new() { Name = "The Shawshank Redemption", Year = 1994 },
-    new() { Name = "The Godfather", Year = 1972 },
-    new() { Name = "The Dark Knight", Year = 2008 },
-    new() { Name = "Pulp Fiction", Year = 1994 },
-    new() { Name = "Forrest Gump", Year = 1994 },
-    new() { Name = "Inception", Year = 2010 },
-    new() { Name = "Fight Club", Year = 1999 },
-    new() { Name = "The Matrix", Year = 1999 },
-    new() { Name = "The Lord of the Rings: The Return of the King", Year = 2003 }
-};
+app.MapGet("/", async (MovieDbContext db) => await db.Movies.ToListAsync());
 
-app.MapGet("/", (MovieDbContext db) => db.Movies);
-
-app.MapPost("/movies", (Movie movie) =>
+app.MapPost("/movies", async (MovieDbContext db, Movie movie) =>
 {
-    movies.Add(movie);
-    return Results.Created($"/movies/{movies.Count - 1}", movie);
+    db.Movies.Add(movie);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"/movies/{movie.Id}", movie);
 });
 
-app.MapPut("/movies/{index}", (int index, Movie updateMovie) =>
+app.MapPut("/movies", async (MovieDbContext db, Movie updateMovie) =>
 {
-    if (index < 0 || index >= movies.Count)
+    var movie = await db.Movies.FindAsync(updateMovie.Id);
+    if (movie is null)
     {
         return Results.NotFound();
     }
-    movies[index] = updateMovie;
+
+    movie.Name = updateMovie.Name;
+    movie.Year = updateMovie.Year;
+
+    await db.SaveChangesAsync();
+
     return Results.NoContent();
 });
 
-app.MapDelete("/movies/{index}", (int index) =>
+app.MapDelete("/movies/{id}", async (MovieDbContext db, int id) =>
 {
-    if (index < 0 || index >= movies.Count)
+    var movie = await db.Movies.FindAsync(id);
+    if (movie is null)
     {
         return Results.NotFound();
     }
-
-    movies.RemoveAt(index);
+    db.Movies.Remove(movie);
+    await db.SaveChangesAsync();
     return Results.NoContent();
 
 });
 
 app.Run();
 
-public class MovieDbContext:DbContext
+public class MovieDbContext : DbContext
 {
     public DbSet<Movie> Movies { get; set; }
 
