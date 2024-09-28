@@ -361,3 +361,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/MiniMovieApi/movies.db-shm
+/MiniMovieApi/movies.db-wal
